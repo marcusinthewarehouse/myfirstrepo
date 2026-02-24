@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edgeworth Box – Jane &amp; Bob</title>
+<style>
+  body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #f5f5f5;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  canvas {
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  }
+</style>
+</head>
+<body>
+<canvas id="chart" width="820" height="820"></canvas>
+<script>
+const canvas = document.getElementById('chart');
+const ctx = canvas.getContext('2d');
+
+// Layout constants
+const margin = { top: 70, right: 70, bottom: 70, left: 70 };
+const W = canvas.width  - margin.left - margin.right;   // box width
+const H = canvas.height - margin.top  - margin.bottom;  // box height
+const ox = margin.left;   // Jane's origin x on canvas
+const oy = margin.top + H; // Jane's origin y on canvas
+const units = 20; // total soft drinks & sandwiches
+
+function xJ(v) { return ox + (v / units) * W; }  // Jane x
+function yJ(v) { return oy - (v / units) * H; }  // Jane y
+
+// ── Grid ──────────────────────────────────────────────
+ctx.strokeStyle = '#ddd';
+ctx.lineWidth = 0.5;
+for (let i = 0; i <= units; i++) {
+  // vertical
+  ctx.beginPath(); ctx.moveTo(xJ(i), yJ(0)); ctx.lineTo(xJ(i), yJ(units)); ctx.stroke();
+  // horizontal
+  ctx.beginPath(); ctx.moveTo(xJ(0), yJ(i)); ctx.lineTo(xJ(units), yJ(i)); ctx.stroke();
+}
+
+// ── Box border ────────────────────────────────────────
+ctx.strokeStyle = '#000';
+ctx.lineWidth = 2;
+ctx.strokeRect(ox, margin.top, W, H);
+
+// ── Tick marks & labels — Jane (bottom + left) ───────
+ctx.fillStyle = '#000';
+ctx.font = '13px Arial';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'top';
+for (let i = 0; i <= units; i += 2) {
+  // bottom ticks
+  ctx.beginPath(); ctx.moveTo(xJ(i), yJ(0)); ctx.lineTo(xJ(i), yJ(0) + 6); ctx.stroke();
+  ctx.fillText(i, xJ(i), yJ(0) + 8);
+}
+ctx.textAlign = 'right';
+ctx.textBaseline = 'middle';
+for (let i = 0; i <= units; i += 2) {
+  // left ticks
+  ctx.beginPath(); ctx.moveTo(xJ(0), yJ(i)); ctx.lineTo(xJ(0) - 6, yJ(i)); ctx.stroke();
+  ctx.fillText(i, xJ(0) - 9, yJ(i));
+}
+
+// ── Tick marks & labels — Bob (top + right) ──────────
+ctx.textAlign = 'center';
+ctx.textBaseline = 'bottom';
+for (let i = 0; i <= units; i += 2) {
+  const bobVal = units - i;
+  ctx.beginPath(); ctx.moveTo(xJ(i), yJ(units)); ctx.lineTo(xJ(i), yJ(units) - 6); ctx.stroke();
+  ctx.fillText(bobVal, xJ(i), yJ(units) - 8);
+}
+ctx.textAlign = 'left';
+ctx.textBaseline = 'middle';
+for (let i = 0; i <= units; i += 2) {
+  const bobVal = units - i;
+  ctx.beginPath(); ctx.moveTo(xJ(units), yJ(i)); ctx.lineTo(xJ(units) + 6, yJ(i)); ctx.stroke();
+  ctx.fillText(bobVal, xJ(units) + 9, yJ(i));
+}
+
+// ── Axis titles ──────────────────────────────────────
+ctx.font = 'bold 15px Arial';
+
+// Jane bottom
+ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+ctx.fillText("Jane's soft drinks (liters)", ox + W / 2, yJ(0) + 28);
+
+// Jane left
+ctx.save();
+ctx.translate(ox - 48, margin.top + H / 2);
+ctx.rotate(-Math.PI / 2);
+ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+ctx.fillText("Jane's sandwiches", 0, 0);
+ctx.restore();
+
+// Bob top
+ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+ctx.fillText("Bob's soft drinks (liters)", ox + W / 2, yJ(units) - 28);
+
+// Bob right
+ctx.save();
+ctx.translate(xJ(units) + 48, margin.top + H / 2);
+ctx.rotate(Math.PI / 2);
+ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+ctx.fillText("Bob's sandwiches", 0, 0);
+ctx.restore();
+
+// ── Origin labels ────────────────────────────────────
+ctx.font = 'bold 16px Arial';
+ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+ctx.fillText("Jane", ox - 8, yJ(0) + 4);
+ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+ctx.fillText("Bob", xJ(units) + 8, yJ(units) - 4);
+
+// ── Endowment point ─────────────────────────────────
+const ex = 9, ey = 8;  // Jane's endowment
+ctx.fillStyle = '#2a7f2a';
+ctx.beginPath();
+ctx.arc(xJ(ex), yJ(ey), 7, 0, Math.PI * 2);
+ctx.fill();
+ctx.fillStyle = '#000';
+ctx.font = 'bold 13px Arial';
+ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+ctx.fillText('Endowment (9, 8)', xJ(ex) + 10, yJ(ey) - 6);
+
+// ── Helper: draw smooth curve through points ─────────
+function drawCurve(points, color, lineWidth, dash) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.setLineDash(dash || []);
+  ctx.beginPath();
+  ctx.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length - 1; i++) {
+    const xc = (points[i][0] + points[i + 1][0]) / 2;
+    const yc = (points[i][1] + points[i + 1][1]) / 2;
+    ctx.quadraticCurveTo(points[i][0], points[i][1], xc, yc);
+  }
+  const last = points[points.length - 1];
+  const prev = points[points.length - 2];
+  ctx.quadraticCurveTo(prev[0], prev[1], last[0], last[1]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ── Jane's indifference curve (U_J) ─────────────────
+// Convex toward Jane's origin (bottom-left).
+// MRS = 4 at (9,8): the curve is steep at the endowment.
+// We use a CES-style utility: U = (x^r + k*y^r)^(1/r) calibrated so
+// MRS = 4 at (9,8). For simplicity we just plot a well-shaped curve.
+
+// Jane's utility: U = x^a * y^(1-a)  Cobb-Douglas
+// MRS = (a/(1-a)) * (y/x) = 4  at (9,8)
+// (a/(1-a)) * (8/9) = 4  =>  a/(1-a) = 4.5  =>  a = 4.5/5.5 = 9/11
+const aJ = 9 / 11;
+const UJ = Math.pow(ex, aJ) * Math.pow(ey, 1 - aJ);
+
+let janePoints = [];
+for (let sd = 0.4; sd <= 20; sd += 0.15) {
+  const sw = Math.pow(UJ / Math.pow(sd, aJ), 1 / (1 - aJ));
+  if (sw >= 0 && sw <= 20) {
+    janePoints.push([xJ(sd), yJ(sw)]);
+  }
+}
+drawCurve(janePoints, '#1a6dcc', 3);
+
+// Label U_J
+const jLabelIdx = Math.min(janePoints.length - 1, Math.floor(janePoints.length * 0.15));
+ctx.fillStyle = '#1a6dcc';
+ctx.font = 'bold italic 16px Arial';
+ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+ctx.fillText('U', janePoints[jLabelIdx][0] - 20, janePoints[jLabelIdx][1] - 4);
+ctx.font = 'bold 12px Arial';
+ctx.textBaseline = 'top';
+ctx.fillText('J', janePoints[jLabelIdx][0] - 7, janePoints[jLabelIdx][1] - 4);
+
+// ── Bob's indifference curve (U_B) ──────────────────
+// Bob's endowment from his origin: (11, 12)
+// MRS_Bob = 3 at his endowment.
+// Cobb-Douglas: MRS = (aB/(1-aB)) * (12/11) = 3
+// aB/(1-aB) = 3 * 11/12 = 2.75  =>  aB = 2.75/3.75 = 11/15
+const bex = 11, bey = 12;  // Bob's endowment from Bob's origin
+const aB = 11 / 15;
+const UB = Math.pow(bex, aB) * Math.pow(bey, 1 - aB);
+
+let bobPoints = [];
+for (let sd = 0.4; sd <= 20; sd += 0.15) {
+  const sw = Math.pow(UB / Math.pow(sd, aB), 1 / (1 - aB));
+  if (sw >= 0 && sw <= 20) {
+    // Convert Bob's coordinates to canvas (flip both axes)
+    bobPoints.push([xJ(units - sd), yJ(units - sw)]);
+  }
+}
+// Sort by x for smooth drawing
+bobPoints.sort((a, b) => a[0] - b[0]);
+drawCurve(bobPoints, '#cc3333', 3);
+
+// Label U_B
+const bLabelIdx = Math.min(bobPoints.length - 1, Math.floor(bobPoints.length * 0.85));
+ctx.fillStyle = '#cc3333';
+ctx.font = 'bold italic 16px Arial';
+ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+ctx.fillText('U', bobPoints[bLabelIdx][0] + 20, bobPoints[bLabelIdx][1] + 4);
+ctx.font = 'bold 12px Arial';
+ctx.fillText('B', bobPoints[bLabelIdx][0] + 33, bobPoints[bLabelIdx][1] + 12);
+
+// ── Shade the lens (gains from trade) ────────────────
+// Collect Jane's curve points and Bob's curve points that overlap in x-range
+// and shade the area between them.
+function getYatX(points, targetX) {
+  for (let i = 0; i < points.length - 1; i++) {
+    if ((points[i][0] <= targetX && points[i+1][0] >= targetX) ||
+        (points[i][0] >= targetX && points[i+1][0] <= targetX)) {
+      const t = (targetX - points[i][0]) / (points[i+1][0] - points[i][0]);
+      return points[i][1] + t * (points[i+1][1] - points[i][1]);
+    }
+  }
+  return null;
+}
+
+// Find x-range overlap
+const janeXmin = Math.min(...janePoints.map(p => p[0]));
+const janeXmax = Math.max(...janePoints.map(p => p[0]));
+const bobXmin  = Math.min(...bobPoints.map(p => p[0]));
+const bobXmax  = Math.max(...bobPoints.map(p => p[0]));
+const overlapXmin = Math.max(janeXmin, bobXmin);
+const overlapXmax = Math.min(janeXmax, bobXmax);
+
+ctx.fillStyle = 'rgba(255, 220, 100, 0.3)';
+ctx.beginPath();
+// Trace along Jane's curve left to right
+let startedLens = false;
+for (let px = overlapXmin; px <= overlapXmax; px += 1) {
+  const jY = getYatX(janePoints, px);
+  const bY = getYatX(bobPoints, px);
+  if (jY !== null && bY !== null && jY > bY) { // Jane's y (canvas) > Bob's y means Jane is below Bob visually
+    // This means Bob's curve is above Jane's curve — lens region
+    if (!startedLens) { ctx.moveTo(px, bY); startedLens = true; }
+    else ctx.lineTo(px, bY);
+  }
+}
+// Trace back along Jane's curve right to left
+for (let px = overlapXmax; px >= overlapXmin; px -= 1) {
+  const jY = getYatX(janePoints, px);
+  const bY = getYatX(bobPoints, px);
+  if (jY !== null && bY !== null && jY > bY) {
+    ctx.lineTo(px, jY);
+  }
+}
+ctx.closePath();
+ctx.fill();
+
+// ── Legend ────────────────────────────────────────────
+const lx = ox + 12, ly = margin.top + 12;
+ctx.fillStyle = 'rgba(255,255,255,0.85)';
+ctx.fillRect(lx, ly, 230, 90);
+ctx.strokeStyle = '#999'; ctx.lineWidth = 1;
+ctx.strokeRect(lx, ly, 230, 90);
+
+ctx.font = '13px Arial';
+// Jane
+ctx.strokeStyle = '#1a6dcc'; ctx.lineWidth = 3; ctx.setLineDash([]);
+ctx.beginPath(); ctx.moveTo(lx+10, ly+20); ctx.lineTo(lx+40, ly+20); ctx.stroke();
+ctx.fillStyle = '#000';
+ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+ctx.fillText("Jane's indifference curve (U )", lx+48, ly+20);
+ctx.font = '10px Arial';
+ctx.fillText('J', lx + 215, ly + 24);
+
+ctx.font = '13px Arial';
+// Bob
+ctx.strokeStyle = '#cc3333'; ctx.lineWidth = 3;
+ctx.beginPath(); ctx.moveTo(lx+10, ly+48); ctx.lineTo(lx+40, ly+48); ctx.stroke();
+ctx.fillStyle = '#000';
+ctx.fillText("Bob's indifference curve (U )", lx+48, ly+48);
+ctx.font = '10px Arial';
+ctx.fillText('B', lx + 210, ly + 52);
+
+ctx.font = '13px Arial';
+// Lens
+ctx.fillStyle = 'rgba(255, 220, 100, 0.5)';
+ctx.fillRect(lx+10, ly+68, 30, 12);
+ctx.strokeStyle = '#bba830'; ctx.lineWidth = 1;
+ctx.strokeRect(lx+10, ly+68, 30, 12);
+ctx.fillStyle = '#000';
+ctx.fillText('Mutually beneficial trades', lx+48, ly+75);
+
+// ── Annotation: MRS values ───────────────────────────
+ctx.font = '13px Arial';
+ctx.fillStyle = '#1a6dcc';
+ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+ctx.fillText('MRS  = 4', xJ(ex) + 10, yJ(ey) + 10);
+ctx.font = '10px Arial';
+ctx.fillText('Jane', xJ(ex) + 33, yJ(ey) + 14);
+
+ctx.font = '13px Arial';
+ctx.fillStyle = '#cc3333';
+ctx.fillText('MRS    = 3', xJ(ex) + 10, yJ(ey) + 28);
+ctx.font = '10px Arial';
+ctx.fillText('Bob', xJ(ex) + 33, yJ(ey) + 32);
+
+// Not efficient annotation
+ctx.font = 'bold 13px Arial';
+ctx.fillStyle = '#8B0000';
+ctx.fillText('MRS  \u2260 MRS    \u2192 Not Pareto efficient', xJ(ex) + 10, yJ(ey) + 50);
+ctx.font = '10px Arial';
+ctx.fillText('Jane', xJ(ex) + 33, yJ(ey) + 54);
+ctx.fillText('Bob', xJ(ex) + 80, yJ(ey) + 54);
+</script>
+</body>
+</html>
